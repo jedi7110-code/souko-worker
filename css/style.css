@@ -1,0 +1,195 @@
+:root {
+  --bg: #0b0e14;
+  --panel: rgba(13, 17, 26, 0.78);
+  --panel-border: rgba(120, 150, 200, 0.25);
+  --text: #dde4f0;
+  --dim: #8b95ab;
+  --accent: #37e0b8;
+  --accent2: #ffb054;
+  font-size: 16px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 16:9 固定のゲーム画面を中央に置き、余白はレターボックスの帯にする。
+   canvas のサイズは renderer.setSize、帯の幅は --view-x/--view-y(scene3d.js)が決める */
+#app {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #04060a;
+}
+#app canvas { display: block; cursor: grab; }
+#app canvas:active { cursor: grabbing; }
+
+/* ---- HUD ---- */
+#hud {
+  position: fixed;
+  top: calc(var(--view-y, 0px) + 14px);
+  left: calc(var(--view-x, 0px) + 14px);
+  padding: 10px 14px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+  line-height: 1.5;
+}
+#hud-level { font-weight: 700; letter-spacing: 0.02em; }
+#hud-stats { font-size: 0.85rem; color: var(--dim); }
+#hud-stats b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+#hint {
+  position: fixed;
+  bottom: calc(var(--view-y, 0px) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(92vw, 860px);
+  padding: 8px 16px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
+  font-size: 0.78rem;
+  color: var(--dim);
+  text-align: center;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#hint b { color: var(--accent); font-weight: 600; }
+
+/* ---- オーバーレイ共通 ---- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 7, 11, 0.62);
+  backdrop-filter: blur(4px);
+  z-index: 10;
+  opacity: 1;
+  transition: opacity 0.18s ease;
+}
+.overlay.hidden { opacity: 0; pointer-events: none; visibility: hidden; }
+
+.card {
+  background: #121826;
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  padding: 28px 34px;
+  max-width: min(92vw, 560px);
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+  text-align: center;
+}
+.card h1 {
+  margin: 0 0 14px;
+  font-size: 1.5rem;
+  letter-spacing: 0.04em;
+}
+.card .lead { line-height: 1.8; margin: 0 0 10px; }
+.card .mirror-note {
+  line-height: 1.8;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(55, 224, 184, 0.08);
+  border: 1px solid rgba(55, 224, 184, 0.25);
+}
+.card .mirror-note b { color: var(--accent); }
+
+table.keys {
+  margin: 0 auto 18px;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  text-align: left;
+}
+table.keys td { padding: 4px 10px; }
+table.keys td:first-child { white-space: nowrap; color: var(--dim); }
+kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 1px 6px;
+  border: 1px solid #3a4661;
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: #1b2333;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.85em;
+  text-align: center;
+}
+
+button {
+  appearance: none;
+  border: 1px solid var(--panel-border);
+  background: #1b2333;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 10px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.06s ease;
+}
+button:hover { background: #232d42; }
+button:active { transform: translateY(1px); }
+button.primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: #07211a;
+  font-weight: 700;
+}
+button.primary:hover { background: #4aeac4; }
+
+.buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ---- クリア ---- */
+#clear-title { color: var(--accent2); font-size: 1.9rem; }
+#clear-stats { font-size: 1.05rem; margin: 0 0 4px; }
+#clear-best { color: var(--accent); min-height: 1.4em; margin: 0 0 16px; font-size: 0.9rem; }
+
+/* ---- レベル選択 ---- */
+#menu-levels {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin: 0 0 18px;
+  min-width: min(80vw, 380px);
+}
+.level-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  padding: 12px 16px;
+}
+.level-btn .no {
+  font-weight: 700;
+  color: var(--dim);
+  min-width: 2.2em;
+}
+.level-btn .name { flex: 1; font-weight: 600; }
+.level-btn .stat { font-size: 0.8rem; color: var(--dim); }
+.level-btn .stat.done { color: var(--accent); }
+.level-btn.current { outline: 2px solid var(--accent); outline-offset: -2px; }

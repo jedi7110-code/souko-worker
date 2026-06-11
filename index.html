@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>鏡の倉庫番 SOUKO</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="./css/style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="hud">
+    <div id="hud-level"></div>
+    <div id="hud-stats">手数 <b id="stat-moves">0</b> ・ 押し <b id="stat-pushes">0</b></div>
+  </div>
+
+  <div id="hint">
+    W 前へ(箱を押す) / A・D 向きを変える / Q・E 横歩き /
+    <b>Space 上を見る(天井は鏡)</b> / Z 戻す / R やり直し / Esc レベル選択
+  </div>
+
+  <div id="overlay-help" class="overlay hidden">
+    <div class="card">
+      <h1>鏡の倉庫番</h1>
+      <p class="lead">
+        すべての<b>大きな箱</b>を、光る<b>ゴールの床</b>へ押し込もう。<br>
+        箱は<b>押すことしかできない</b>。引けない。よく考えて。
+      </p>
+      <p class="mirror-note">
+        天井は一面の<b>鏡</b>。<b>Space</b> で見上げると倉庫全体が映る。<br>
+        鏡の中の人物があなた自身 — 首の動きや箱を押す姿もそのまま映る。
+      </p>
+      <table class="keys">
+        <tr><td><kbd>W</kbd> / <kbd>↑</kbd></td><td>1マス前進(目の前の箱を押す)</td></tr>
+        <tr><td><kbd>S</kbd> / <kbd>↓</kbd></td><td>1マス後退</td></tr>
+        <tr><td><kbd>A</kbd> <kbd>D</kbd> / <kbd>←</kbd> <kbd>→</kbd></td><td>左右に90°向きを変える</td></tr>
+        <tr><td><kbd>Q</kbd> <kbd>E</kbd></td><td>左右に1マス横歩き</td></tr>
+        <tr><td><kbd>Space</kbd>(長押し)</td><td>天井の鏡を見上げる(全体マップ)</td></tr>
+        <tr><td>マウスドラッグ</td><td>あたりを見回す(離すと正面に戻る)</td></tr>
+        <tr><td><kbd>Z</kbd> / <kbd>BS</kbd></td><td>1手戻す</td></tr>
+        <tr><td><kbd>R</kbd></td><td>この面をやり直す</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>レベル選択</td></tr>
+        <tr><td><kbd>H</kbd></td><td>このヘルプ</td></tr>
+      </table>
+      <button id="help-close" class="primary">はじめる</button>
+    </div>
+  </div>
+
+  <div id="overlay-clear" class="overlay hidden">
+    <div class="card">
+      <h1 id="clear-title">クリア!</h1>
+      <p id="clear-stats"></p>
+      <p id="clear-best"></p>
+      <div class="buttons">
+        <button id="clear-next" class="primary">次の面へ</button>
+        <button id="clear-replay">もう一度</button>
+        <button id="clear-menu">レベル選択</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="overlay-menu" class="overlay hidden">
+    <div class="card">
+      <h1>レベル選択</h1>
+      <div id="menu-levels"></div>
+      <div class="buttons">
+        <button id="menu-close">とじる</button>
+        <button id="menu-help">あそびかた</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
