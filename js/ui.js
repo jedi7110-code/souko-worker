@@ -1,7 +1,8 @@
 // HUD・オーバーレイ(ヘルプ/クリア/レベル選択)・localStorage 進捗。
 // モーダル表示中のキーボード操作はここで処理する(controls 側は isModalOpen で休止)。
 
-const STORE_KEY = 'souko.progress.v1';
+// v2: L6〜L10 を物理的に大きい倉庫へ再設計し旧ベスト記録が無効になったため進捗キーを更新
+const STORE_KEY = 'souko.progress.v2';
 const HELP_KEY = 'souko.helpSeen.v1';
 
 export function createUI({ levels, onSelectLevel, onNextLevel, onReplayLevel }) {
