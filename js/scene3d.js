@@ -581,8 +581,8 @@ export function createScene(container) {
 
     // 天井の鏡。高さはレベルサイズに応じて: 見上げたとき盤面全体が映る高さにする。
     // 壁を4.6mに上げたので、その陰に奥のマスが隠れないよう鏡も高くして見上げ視点を
-    // より真上(俯瞰)に近づける(0.95は盤面が遠く小さく映りすぎたため0.8に調整)
-    const ceilH = Math.max(10, Math.max(state.width, state.height) * CELL * 0.8);
+    // より真上(俯瞰)に近づける(0.95→0.8→0.65と段階的に下げ、倉庫の天井らしい近さに)
+    const ceilH = Math.max(8, Math.max(state.width, state.height) * CELL * 0.65);
     level.ceilH = ceilH;
     const mirrorW = planW + CELL * 2;
     const mirrorH = planH + CELL * 2;
