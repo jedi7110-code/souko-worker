@@ -5,6 +5,7 @@ import { parseLevel } from './sokoban.js';
 import { createScene } from './scene3d.js';
 import { createControls } from './controls.js';
 import { createUI } from './ui.js';
+import { createTouchControls } from './touch.js';
 
 const sceneApi = createScene(document.getElementById('app'));
 
@@ -42,6 +43,21 @@ function loadLevel(i) {
   controls.resetForLevel(state);
   ui.updateHUD(state, i);
 }
+
+// スマホ向けタッチ操作を配線
+createTouchControls({ controls, ui });
+
+// topbar のアクションボタン(click 後に blur し、以降の Enter/Space キーで再発火させない)
+const wireTopButton = (id, fn) => {
+  const btn = document.getElementById(id);
+  btn.addEventListener('click', () => {
+    btn.blur();
+    fn();
+  });
+};
+wireTopButton('btn-reset', () => loadLevel(levelIndex));
+wireTopButton('btn-menu', () => ui.openMenu());
+wireTopButton('btn-help', () => ui.toggleHelp());
 
 loadLevel(ui.firstUnclearedIndex());
 ui.maybeShowFirstHelp();

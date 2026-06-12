@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>鏡の倉庫番 SOUKO</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <link rel="stylesheet" href="./css/style.css">
   <script type="importmap">
     {
@@ -15,16 +15,39 @@
   </script>
 </head>
 <body>
-  <div id="app"></div>
-
-  <div id="hud">
-    <div id="hud-level"></div>
-    <div id="hud-stats">手数 <b id="stat-moves">0</b> ・ 押し <b id="stat-pushes">0</b></div>
+  <div id="topbar">
+    <div id="hud">
+      <span id="hud-level"></span>
+      <span id="hud-stats">手数 <b id="stat-moves">0</b> ・ 押し <b id="stat-pushes">0</b></span>
+    </div>
+    <div id="topbar-actions">
+      <button id="btn-reset" title="やり直し (R)">やり直し</button>
+      <button id="btn-menu" title="レベル選択 (Esc)">レベル</button>
+      <button id="btn-help" title="あそびかた (H)">?</button>
+    </div>
   </div>
 
-  <div id="hint">
-    W 前へ(箱を押す) / A・D 向きを変える / Q・E 横歩き /
-    <b>Space 上を見る(天井は鏡)</b> / Z 戻す / R やり直し / Esc レベル選択
+  <div id="stage"><div id="app"></div></div>
+
+  <div id="bottombar">
+    <div id="hint">
+      W 前へ(箱を押す) / A・D 向きを変える / Q・E 横歩き /
+      <b>Space 上を見る(天井は鏡)</b> / Z 戻す / R やり直し / Esc レベル選択
+    </div>
+    <div id="touch-controls">
+      <div class="dpad">
+        <button class="dbtn" data-cmd="TL" title="左を向く">↰</button>
+        <button class="dbtn" data-cmd="F" title="前へ">▲</button>
+        <button class="dbtn" data-cmd="TR" title="右を向く">↱</button>
+        <button class="dbtn" data-cmd="SL" title="横歩き(左)">⬅</button>
+        <button class="dbtn" data-cmd="B" title="後退">▼</button>
+        <button class="dbtn" data-cmd="SR" title="横歩き(右)">➡</button>
+      </div>
+      <div class="touch-right">
+        <button id="touch-mirror" class="round" title="鏡(長押しで見上げ)">鏡</button>
+        <button id="touch-undo" class="round" title="戻す">戻す</button>
+      </div>
+    </div>
   </div>
 
   <div id="overlay-help" class="overlay hidden">
@@ -50,6 +73,7 @@
         <tr><td><kbd>Esc</kbd></td><td>レベル選択</td></tr>
         <tr><td><kbd>H</kbd></td><td>このヘルプ</td></tr>
       </table>
+      <p class="touch-help">画面下のボタンで移動。<b>鏡</b>を長押しすると天井の鏡で全体が見える。</p>
       <button id="help-close" class="primary">はじめる</button>
     </div>
   </div>

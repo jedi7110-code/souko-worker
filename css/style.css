@@ -21,55 +21,162 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* 16:9 固定のゲーム画面を中央に置き、余白はレターボックスの帯にする。
-   canvas のサイズは renderer.setSize、帯の幅は --view-x/--view-y(scene3d.js)が決める */
+/* 上下バー + 中央ステージの縦積みレイアウト(画面いっぱい) */
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* ---- 上下バー ---- */
+#topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--panel-border);
+}
+#bottombar {
+  padding: 8px 14px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  background: var(--panel);
+  border-top: 1px solid var(--panel-border);
+}
+/* バー内のテキストはUI部品なので選択させない */
+#topbar, #bottombar {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* topbar 内のアクションボタンは小さめ */
+#topbar-actions { display: flex; gap: 8px; flex-shrink: 0; }
+#topbar-actions button {
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  border-radius: 8px;
+}
+
+/* 中央ステージ: 残りの高さをすべて使い、その中に 16:9 canvas を中央配置 */
+#stage {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
 #app {
-  position: fixed;
-  inset: 0;
+  width: 100%;
+  height: 100%;
   display: grid;
   place-items: center;
   background: #04060a;
 }
-#app canvas { display: block; cursor: grab; }
+#app canvas { display: block; cursor: grab; touch-action: none; }
 #app canvas:active { cursor: grabbing; }
 
-/* ---- HUD ---- */
+/* ---- HUD(topbar 内の通常フロー) ---- */
 #hud {
-  position: fixed;
-  top: calc(var(--view-y, 0px) + 14px);
-  left: calc(var(--view-x, 0px) + 14px);
-  padding: 10px 14px;
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  border-radius: 10px;
-  backdrop-filter: blur(6px);
-  pointer-events: none;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
   line-height: 1.5;
+  min-width: 0;
+  overflow: hidden;
 }
-#hud-level { font-weight: 700; letter-spacing: 0.02em; }
-#hud-stats { font-size: 0.85rem; color: var(--dim); }
+#hud-level {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#hud-stats { font-size: 0.85rem; color: var(--dim); white-space: nowrap; }
 #hud-stats b { color: var(--text); font-variant-numeric: tabular-nums; }
 
+/* ---- ヒント(bottombar 内の通常フロー) ---- */
 #hint {
-  position: fixed;
-  bottom: calc(var(--view-y, 0px) + 12px);
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: min(92vw, 860px);
-  padding: 8px 16px;
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  border-radius: 999px;
-  backdrop-filter: blur(6px);
+  margin: 0 auto;
+  max-width: min(96vw, 860px);
   font-size: 0.78rem;
   color: var(--dim);
   text-align: center;
-  pointer-events: none;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 #hint b { color: var(--accent); font-weight: 600; }
+
+/* ---- タッチ操作(スマホ) ---- */
+/* 既定(fine ポインタ)では隠す。pointer:coarse のときだけ表示する */
+#touch-controls { display: none; }
+#touch-controls {
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+/* 十字パッド(3列2行) */
+.dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.dpad .dbtn {
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  font-size: 1.4rem;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+}
+/* 右側: 鏡(大きめの丸)と戻す */
+.touch-right { display: flex; align-items: center; gap: 12px; }
+.touch-right .round {
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 0.9rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+#touch-mirror { background: #243042; }
+#touch-mirror:active { background: var(--accent); color: #07211a; }
+/* タッチボタン共通: タップ遅延・ハイライト・選択を抑止 */
+#touch-controls button {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ヘルプ内のタッチ説明は既定で隠す */
+.touch-help { display: none; }
+
+/* タッチ端末: ヒント↔タッチUI、キー表↔タッチ説明 を入れ替える */
+@media (pointer: coarse) {
+  #hint { display: none; }
+  #touch-controls { display: flex; }
+  table.keys { display: none; }
+  .touch-help {
+    display: block;
+    line-height: 1.8;
+    margin: 0 0 16px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: rgba(55, 224, 184, 0.08);
+    border: 1px solid rgba(55, 224, 184, 0.25);
+  }
+  .touch-help b { color: var(--accent); }
+}
+@media (pointer: fine) {
+  #touch-controls { display: none; }
+  .touch-help { display: none; }
+}
 
 /* ---- オーバーレイ共通 ---- */
 .overlay {
@@ -193,3 +300,16 @@ button.primary:hover { background: #4aeac4; }
 .level-btn .stat { font-size: 0.8rem; color: var(--dim); }
 .level-btn .stat.done { color: var(--accent); }
 .level-btn.current { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* ---- 小画面(スマホ縦)ではカードを詰める ---- */
+@media (max-width: 480px) {
+  .card { padding: 20px 18px; }
+  .card h1 { font-size: 1.25rem; }
+  /* topbar: レベル名が潰れないよう、レベル名と手数を縦積みにしてボタンも詰める */
+  #topbar { padding: 6px 10px; }
+  #hud { flex-direction: column; align-items: flex-start; gap: 0; }
+  #hud-level { font-size: 0.9rem; }
+  #hud-stats { font-size: 0.72rem; }
+  #topbar-actions { gap: 6px; }
+  #topbar-actions button { padding: 4px 8px; font-size: 0.72rem; }
+}

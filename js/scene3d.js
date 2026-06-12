@@ -7,7 +7,7 @@ import { key } from './sokoban.js';
 
 export const CELL = 2;      // 1マスの一辺(m)
 export const BOX = 1.8;     // 箱の一辺。目線(≈1.15m = NECK_Y + EYE_OFF_Y)よりはるかに高く、圧迫感を出す
-export const WALL_H = 2.2;  // 壁の高さ。低めにして鏡から迷路全体が見えるように
+export const WALL_H = 4.6;  // 壁の高さ。箱1.8mの2.5倍超で本物の倉庫の通路感を出す。鏡の高さ(ceilH)も連動して上げたので鏡越し俯瞰の読みやすさは維持
 
 // ---- 手続きテクスチャ ----
 
@@ -47,42 +47,126 @@ function makeCrateTexture() {
   return tex;
 }
 
+// 壁テクスチャ: 倉庫の波板鋼板(コルゲート)風。壁の面はセル幅2m×高さ4.6mで
+// 縦長なので、キャンバスも縦長(256×512)にして縦の波板が引き伸ばされないようにする
 function makeWallTexture() {
+  const W = 256, H = 512;
   const c = document.createElement('canvas');
-  c.width = c.height = 128;
+  c.width = W;
+  c.height = H;
   const g = c.getContext('2d');
-  const grad = g.createLinearGradient(0, 0, 0, 128);
-  grad.addColorStop(0, '#626e88');
-  grad.addColorStop(1, '#454e63');
+
+  // ベース: 鋼板のブルーグレー縦グラデーション
+  const grad = g.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#5a6275');
+  grad.addColorStop(1, '#3e4452');
   g.fillStyle = grad;
-  g.fillRect(0, 0, 128, 128);
-  for (let i = 0; i < 200; i++) {
-    g.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.05})`;
-    g.fillRect(Math.random() * 128, Math.random() * 128, 2, 2);
+  g.fillRect(0, 0, W, H);
+
+  // 縦の波板(コルゲート): 約16px周期。各山の片側に明るいハイライト、反対側に暗い
+  // シャドウを縦線で入れて、鋼板が波打って見える立体感を出す
+  const period = 16;
+  for (let x = 0; x < W; x += period) {
+    g.fillStyle = 'rgba(255, 255, 255, 0.12)';
+    g.fillRect(x + 2, 0, 2, H);           // 山の左側=ハイライト
+    g.fillStyle = 'rgba(0, 0, 0, 0.22)';
+    g.fillRect(x + period - 3, 0, 2, H);  // 谷の右側=シャドウ
   }
-  g.fillStyle = 'rgba(10, 14, 22, 0.5)';
-  g.fillRect(0, 124, 128, 4);
+
+  // 横の継ぎ目: 高さ1/3・2/3にシーム線+その上にボルト列(明点+暗縁)
+  for (const sy of [H / 3, (H * 2) / 3]) {
+    g.fillStyle = 'rgba(10, 14, 22, 0.55)';
+    g.fillRect(0, sy - 1, W, 3);
+    for (let bx = period / 2; bx < W; bx += period * 2) {
+      g.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      g.beginPath();
+      g.arc(bx, sy - 5, 3, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = 'rgba(210, 220, 235, 0.6)';
+      g.beginPath();
+      g.arc(bx, sy - 5, 1.6, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+
+  // 汚れ: 白の微小ドット(下地のムラ)+錆色の小斑点を少量
+  for (let i = 0; i < 260; i++) {
+    g.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.05})`;
+    g.fillRect(Math.random() * W, Math.random() * H, 2, 2);
+  }
+  for (let i = 0; i < 40; i++) {
+    g.fillStyle = `rgba(110, 70, 40, ${0.1 + Math.random() * 0.2})`;
+    g.beginPath();
+    g.arc(Math.random() * W, Math.random() * H, 1.5 + Math.random() * 3, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  // 最下部約14%: 黄/黒の45°ハザードストライプ帯(幅16px交互)。黄は少し暗めにして
+  // 浮きすぎないように。帯の上端に暗い境界線を引く
+  const hazTop = Math.round(H * 0.86);
+  g.save();
+  g.beginPath();
+  g.rect(0, hazTop, W, H - hazTop);
+  g.clip();
+  g.fillStyle = '#1a1a18';
+  g.fillRect(0, hazTop, W, H - hazTop);
+  g.strokeStyle = '#c9a227'; // 少し暗めの黄
+  g.lineWidth = 16;
+  for (let d = -H; d < W + H; d += 32) {
+    g.beginPath();
+    g.moveTo(d, hazTop);
+    g.lineTo(d + (H - hazTop), H);
+    g.stroke();
+  }
+  g.restore();
+  g.fillStyle = 'rgba(10, 14, 22, 0.7)';
+  g.fillRect(0, hazTop - 1, W, 3); // 帯の上端の暗い境界線
+
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
   return tex;
 }
 
-// レベルごとの床: 到達可能マスだけタイル模様を描く(鏡から見たとき盤面が読める)
+// レベルごとの床: 到達可能マスだけタイル模様を描く(鏡から見たとき盤面が読める)。
+// 打ちっぱなしコンクリート風: 控えめなグレーのチェッカー+シミ+塗装の目地+安全ライン
 function makeFloorTexture(state) {
   const px = 64;
   const c = document.createElement('canvas');
   c.width = state.width * px;
   c.height = state.height * px;
   const g = c.getContext('2d');
-  g.fillStyle = '#14171f';
+  g.fillStyle = '#14171f'; // 床以外の背景はそのまま
   g.fillRect(0, 0, c.width, c.height);
+  const has = (x, z) => state.floors.has(key(x, z));
   for (let z = 0; z < state.height; z++) {
     for (let x = 0; x < state.width; x++) {
-      if (!state.floors.has(key(x, z))) continue;
-      g.fillStyle = (x + z) % 2 ? '#2b3140' : '#272d3b';
-      g.fillRect(x * px + 1, z * px + 1, px - 2, px - 2);
-      g.strokeStyle = 'rgba(255, 255, 255, 0.045)';
-      g.strokeRect(x * px + 2.5, z * px + 2.5, px - 5, px - 5);
+      if (!has(x, z)) continue;
+      const ox = x * px, oz = z * px;
+      // コンクリートグレーの控えめなチェッカー
+      g.fillStyle = (x + z) % 2 ? '#34373f' : '#2f323a';
+      g.fillRect(ox + 1, oz + 1, px - 2, px - 2);
+      // タイルごとの汚れ・シミ(暗い半透明の小矩形・点を数個)
+      const stains = 3 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < stains; i++) {
+        g.fillStyle = `rgba(0, 0, 0, ${0.04 + Math.random() * 0.08})`;
+        const sw = 4 + Math.random() * 14;
+        const sh = 4 + Math.random() * 14;
+        g.fillRect(ox + 4 + Math.random() * (px - 8 - sw), oz + 4 + Math.random() * (px - 8 - sh), sw, sh);
+      }
+      // 塗装の目地らしく白枠線は残しつつ透明度を下げる
+      g.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+      g.strokeRect(ox + 2.5, oz + 2.5, px - 5, px - 5);
+      // 到達可能エリアの外周(隣が床でない辺)に黄色の控えめな安全ライン。
+      // 倉庫らしさと、壁が高くなった分の鏡俯瞰時の壁際の読みやすさに効く
+      g.strokeStyle = 'rgba(201, 162, 39, 0.5)';
+      g.lineWidth = 2;
+      g.beginPath();
+      if (!has(x, z - 1)) { g.moveTo(ox + 3, oz + 3); g.lineTo(ox + px - 3, oz + 3); }       // 上辺
+      if (!has(x, z + 1)) { g.moveTo(ox + 3, oz + px - 3); g.lineTo(ox + px - 3, oz + px - 3); } // 下辺
+      if (!has(x - 1, z)) { g.moveTo(ox + 3, oz + 3); g.lineTo(ox + 3, oz + px - 3); }       // 左辺
+      if (!has(x + 1, z)) { g.moveTo(ox + px - 3, oz + 3); g.lineTo(ox + px - 3, oz + px - 3); } // 右辺
+      g.stroke();
     }
   }
   const tex = new THREE.CanvasTexture(c);
@@ -334,15 +418,17 @@ const VIEW_ASPECT = 16 / 9;
 export const FOV = 65;        // 垂直FOV。16:9で水平約97°(70=水平102°は広角すぎ、60=91.5°は狭かった)
 export const FOV_LOOKUP = 72; // Space見上げ時の垂直FOV(盤面全体が収まるユーザー確定値)
 
-function viewSize() {
-  let w = window.innerWidth;
-  let h = window.innerHeight;
-  if (w / h > VIEW_ASPECT) w = Math.round(h * VIEW_ASPECT);
-  else h = Math.round(w / VIEW_ASPECT);
-  return { w, h };
-}
-
 export function createScene(container) {
+  // ステージ(#stage/#app)の中に収まる最大の 16:9 矩形を求める。
+  // 上下バーで高さが変わってもこのコンテナ基準なら追従できる。
+  function viewSize() {
+    let w = container.clientWidth;
+    let h = container.clientHeight;
+    if (w / h > VIEW_ASPECT) w = Math.round(h * VIEW_ASPECT);
+    else h = Math.round(w / VIEW_ASPECT);
+    return { w, h };
+  }
+
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
@@ -355,7 +441,7 @@ export function createScene(container) {
   const camera = new THREE.PerspectiveCamera(FOV, VIEW_ASPECT, 0.1, 200);
   camera.rotation.order = 'YXZ'; // ヨー→ピッチの順で適用
 
-  const hemi = new THREE.HemisphereLight(0xbfd0ff, 0x3a352c, 1.15);
+  const hemi = new THREE.HemisphereLight(0xbfd0ff, 0x3a352c, 1.05); // 壁が高い分、上部の明るすぎを抑える
   scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xfff2dd, 1.7);
   sun.castShadow = true;
@@ -367,7 +453,7 @@ export function createScene(container) {
   const avatar = buildAvatar();
   scene.add(avatar.group);
 
-  // プレイヤー前方の補助光: 目の前の箱を照らす。distance を絞り、壁(2.2m)越しの
+  // プレイヤー前方の補助光: 目の前の箱を照らす。distance を絞り、壁越しの
   // 漏れ光を実質1セル内に抑える。帽子の真上に置かない(鏡内の白飛び回避)
   const playerLight = new THREE.PointLight(0xffe2bd, 2.0, 5, 2);
   scene.add(playerLight);
@@ -448,9 +534,15 @@ export function createScene(container) {
       group.add(ring, dot);
     }
 
-    // 壁(床に隣接するものだけ生成)
+    // 壁(床に隣接するものだけ生成)。BoxGeometry の6面マテリアル配列で、
+    // 側面4面=波板テクスチャ、上面(+Y)と下面=無地のマット。鏡からの俯瞰で
+    // 壁上面に波板やボルトが映ってうるさくならないようにする。
+    // ジオメトリ・マテリアルはループ外で1セット作って全壁で共有(従来方針どおり)
     const wallGeo = new THREE.BoxGeometry(CELL, WALL_H, CELL);
-    const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.85 });
+    const wallSideMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.85 });
+    const wallCapMat = new THREE.MeshStandardMaterial({ color: 0x2a3040, roughness: 0.9 });
+    // BoxGeometry のマテリアル順: +X,-X,+Y(上),-Y(下),+Z,-Z
+    const wallMat = [wallSideMat, wallSideMat, wallCapMat, wallCapMat, wallSideMat, wallSideMat];
     const touchesFloor = (x, z) => {
       for (let dz = -1; dz <= 1; dz++) {
         for (let dx = -1; dx <= 1; dx++) {
@@ -487,14 +579,18 @@ export function createScene(container) {
       level.boxMeshes.set(bk, box);
     }
 
-    // 天井の鏡。高さはレベルサイズに応じて: 見上げたとき盤面全体が映る高さにする
-    const ceilH = Math.max(7, Math.max(state.width, state.height) * CELL * 0.55);
+    // 天井の鏡。高さはレベルサイズに応じて: 見上げたとき盤面全体が映る高さにする。
+    // 壁を4.6mに上げたので、その陰に奥のマスが隠れないよう鏡も高くして見上げ視点を
+    // より真上(俯瞰)に近づける(0.95は盤面が遠く小さく映りすぎたため0.8に調整)
+    const ceilH = Math.max(10, Math.max(state.width, state.height) * CELL * 0.8);
     level.ceilH = ceilH;
     const mirrorW = planW + CELL * 2;
     const mirrorH = planH + CELL * 2;
+    // モバイルGPUは2048の鏡レンダーターゲットが重いので、タッチ端末では1024に落とす
+    const mirrorRes = matchMedia('(pointer: coarse)').matches ? 1024 : 2048;
     const reflector = new Reflector(new THREE.PlaneGeometry(mirrorW, mirrorH), {
-      textureWidth: 2048, // アバターの表情・向きが鏡で読める解像度
-      textureHeight: 2048,
+      textureWidth: mirrorRes, // アバターの表情・向きが鏡で読める解像度(モバイルは1024)
+      textureHeight: mirrorRes,
       clipBias: 0.003,
       multisample: 2, // 2048に上げた分、MSAAは抑えてGPU負荷を相殺
       color: 0x7f7f7f,
@@ -559,12 +655,11 @@ export function createScene(container) {
   function onResize() {
     const { w, h } = viewSize();
     renderer.setSize(w, h); // aspect は VIEW_ASPECT 固定なので投影行列は変わらない
-    // HUD・ヒントをゲーム枠の内側に揃えるためのレターボックス余白(css の calc で参照)
-    const st = document.documentElement.style;
-    st.setProperty('--view-x', `${Math.floor((window.innerWidth - w) / 2)}px`);
-    st.setProperty('--view-y', `${Math.floor((window.innerHeight - h) / 2)}px`);
   }
   onResize();
+
+  // コンテナのサイズ変化(バー高さの増減・端末回転など)に追従する
+  new ResizeObserver(onResize).observe(container);
 
   return {
     renderer,

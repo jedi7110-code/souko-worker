@@ -48,6 +48,8 @@ export function createControls({ getState, sceneApi, ui, onWin, onReset, onMenu 
   let pushView = 0;               // 0=通常, 1=押し中の引き視点
   let fovCur = FOV;
   let dragging = false;
+  let dragX = 0;                  // 直前の pointermove の clientX(差分を自前計算する)
+  let dragY = 0;
   let yawOff = 0;
   let pitchOff = 0;
   let lastPose = { pitch: 0, yaw: 0, yawOff: 0, pitchOff: 0, lookT: 0, fov: FOV };
@@ -204,6 +206,13 @@ export function createControls({ getState, sceneApi, ui, onWin, onReset, onMenu 
     queue.push(cmd);
   }
 
+  // タッチUIからの移動コマンド投入(キーボードと同じ経路へ流す)
+  function enqueue(type) {
+    if (!['F', 'B', 'TL', 'TR', 'SL', 'SR'].includes(type)) return;
+    if (ui.isModalOpen()) return;
+    enqueueKey({ type });
+  }
+
   // ---- 入力 ----
 
   function onKeyDown(e) {
@@ -232,12 +241,20 @@ export function createControls({ getState, sceneApi, ui, onWin, onReset, onMenu 
   function onPointerDown(e) {
     if (e.button !== 0 || ui.isModalOpen()) return;
     dragging = true;
+    // iOS Safari のタッチ由来 PointerEvent は movementX/Y が 0 になるため、
+    // 開始位置を控えて pointermove では clientX/Y の差分を自前計算する
+    dragX = e.clientX;
+    dragY = e.clientY;
     try { canvas.setPointerCapture(e.pointerId); } catch { /* 合成イベント等は無視 */ }
   }
   function onPointerMove(e) {
     if (!dragging) return;
-    yawOff = Math.max(-1.2, Math.min(1.2, yawOff - e.movementX * 0.004));
-    pitchOff = Math.max(-1.3, Math.min(1.3, pitchOff - e.movementY * 0.004));
+    const dx = e.clientX - dragX;
+    const dy = e.clientY - dragY;
+    dragX = e.clientX;
+    dragY = e.clientY;
+    yawOff = Math.max(-1.2, Math.min(1.2, yawOff - dx * 0.004));
+    pitchOff = Math.max(-1.3, Math.min(1.3, pitchOff - dy * 0.004));
   }
   function onPointerUp() {
     dragging = false; // オフセットは tick 内でスプリングで0へ
@@ -380,6 +397,7 @@ export function createControls({ getState, sceneApi, ui, onWin, onReset, onMenu 
     resetForLevel,
     tick,
     undoAction,
+    enqueue,
     step,
     replay,
     lookUp: (b, instant = false) => {
